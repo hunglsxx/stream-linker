@@ -8,6 +8,10 @@ StreamLinker is a library that allows you to connect and livestream video data f
 npm install stream-linker
 ```
 
+## Notes
+- Make sure you have ffmpeg and necessary libraries installed before using this library.
+- You can also provide Redis connection configurations via workerConnection and queueConnection (defaults to localhost:6379).
+
 ## Usage
 ```javascript
 const { StreamLinker, StreamLinkerConfig } = require('stream-linker');
@@ -117,10 +121,6 @@ stream-linker append -i /path/to/another/video.mp4 -o rtmp://example.com/live/st
 Note:
 - Make sure you have installed StreamLinker globally using npm install -g stream-linker before using the CLI.
 - Ensure that both the input and standby video files exist at the specified paths.
-
-## Notes
-- Make sure you have ffmpeg and necessary libraries installed before using this library.
-- You can also provide Redis connection configurations via workerConnection and queueConnection (defaults to localhost:6379).
 
 ## Support
 Contact the author: hunglsxx@gmail.com
