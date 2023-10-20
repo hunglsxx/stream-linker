@@ -78,6 +78,44 @@ linker.start();
 StreamLinker.append('/path/to/another/source/file', 'rtmp://example.com/live/streamkey');
 ```
 
+## Command Line Interface (CLI)
+StreamLinker provides a CLI for seamless streaming. Below are the available commands and their usage:
+
+### Installation
+Install StreamLinker globally using npm:
+
+```bash
+npm install -g stream-linker
+```
+
+### Start Command
+Launch your stream with StreamLinker:
+```bash
+stream-linker start -i <inputPath> -o <outputUrl> [-s <standbyPath>]
+```
+- ```-i, --input <inputPath>```: Path to the input video file. Must be specified.
+- ```-o, --output <outputUrl>```: RTMP output URL for live streaming. Must be specified.
+- ```-s, --standby <standbyPath>``` (optional): Path to the standby video for no signal.
+Example:
+```bash
+stream-linker start -i /path/to/input/video.mp4 -o rtmp://example.com/live/streamkey -s /path/to/standby/video.mp4
+```
+
+### Append Command
+Append a video to your live stream:
+```bash
+stream-linker append -i <inputPath> -o <outputUrl>
+```
+- ```-i, --input <inputPath>```: Path to the input video file. Must be specified.
+- ```-o, --output <outputUrl>```: RTMP output URL for live streaming. Must be specified.
+Example:
+```bash
+stream-linker append -i /path/to/another/video.mp4 -o rtmp://example.com/live/streamkey
+```
+Note:
+- Make sure you have installed StreamLinker globally using npm install -g stream-linker before using the CLI.
+- Ensure that both the input and standby video files exist at the specified paths.
+
 ## Notes
 - Make sure you have ffmpeg and necessary libraries installed before using this library.
 - You can also provide Redis connection configurations via workerConnection and queueConnection (defaults to localhost:6379).
