@@ -1,3 +1,5 @@
+Read this in other languages: English | [Tiếng Việt](./docs/vi-VN/README_vi-VN.md)
+
 # StreamLinker
 
 StreamLinker is a library that allows you to connect and livestream video data from an input source to an RTMP path. This library utilizes ffmpeg and hls-maker technologies for video processing.
