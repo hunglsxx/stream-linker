@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import fs from 'fs';
 import { StreamLinker, StreamLinkerConfig } from '../index';
 import { Command } from 'commander';
