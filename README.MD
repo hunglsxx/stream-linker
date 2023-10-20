@@ -96,6 +96,7 @@ stream-linker start -i <inputPath> -o <outputUrl> [-s <standbyPath>]
 - ```-i, --input <inputPath>```: Path to the input video file. Must be specified.
 - ```-o, --output <outputUrl>```: RTMP output URL for live streaming. Must be specified.
 - ```-s, --standby <standbyPath>``` (optional): Path to the standby video for no signal.
+
 Example:
 ```bash
 stream-linker start -i /path/to/input/video.mp4 -o rtmp://example.com/live/streamkey -s /path/to/standby/video.mp4
@@ -108,6 +109,7 @@ stream-linker append -i <inputPath> -o <outputUrl>
 ```
 - ```-i, --input <inputPath>```: Path to the input video file. Must be specified.
 - ```-o, --output <outputUrl>```: RTMP output URL for live streaming. Must be specified.
+
 Example:
 ```bash
 stream-linker append -i /path/to/another/video.mp4 -o rtmp://example.com/live/streamkey
