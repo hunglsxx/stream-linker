@@ -7,7 +7,6 @@ StreamLinker is a library that allows you to connect and livestream video data f
 ```bash
 npm install stream-linker
 ```
-
 ## Notes
 - Make sure you have ffmpeg and necessary libraries installed before using this library.
 - You can also provide Redis connection configurations via workerConnection and queueConnection (defaults to localhost:6379).
