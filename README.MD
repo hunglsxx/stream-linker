@@ -53,13 +53,23 @@ Appends video to the live stream. This method allows you to add additional segme
 Interface: StreamLinkerConfig
 ```javascript
 interface StreamLinkerConfig {
-    rtmpOuputPath: string;
+    rtmpOuputPath: string; 
     standbyInputFilePath?: string;
     startInputFilePath: string;
     workerConnection?: ConnectionConfig,
     queueConnection?: ConnectionConfig
 }
 ```
+- `rtmpOuputPath` (string): Destination RTMP stream.
+
+- `startInputFilePath` (string): Path to the source video file.
+
+- `standbyInputFilePath` (optional, string): Path to a backup video file. Activated if the source video ends. If not provided, the source video is looped.
+
+- `workerConnection` (optional, ConnectionConfig): Redis connection for the worker.
+
+- `queueConnection` (optional, ConnectionConfig): Redis connection for the queue.
+
 Configuration for StreamLinker. Includes necessary information for initializing and configuring the livestream.
 
 ## Example
@@ -68,8 +78,10 @@ const { StreamLinker, StreamLinkerConfig } = require('stream-linker');
 
 const options: StreamLinkerConfig = {
     rtmpOuputPath: 'rtmp://example.com/live/streamkey',
-    startInputFilePath: '/path/to/your/source/file',
-    // ... other options as needed
+    startInputFilePath: '/path/to/source/video.mp4',
+    standbyInputFilePath: '/path/to/standby/video.mp4', // Optional
+    workerConnection: { host: '127.0.0.1', port: 6380 }, // Optional
+    queueConnection: { host: '127.0.0.1', port: 6381 } // Optional
 };
 
 const linker = new StreamLinker(options);
