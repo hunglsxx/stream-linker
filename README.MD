@@ -2,7 +2,7 @@ Read this in other languages: English | [Tiếng Việt](./docs/vi-VN/README_vi-
 
 # StreamLinker
 
-StreamLinker is a library that allows you to connect and livestream video data from an input source to an RTMP path. This library utilizes ffmpeg and hls-maker technologies for video processing.
+StreamLinker is a library that allows you to connect and livestream video data from an input source to an RTMP path. This library utilizes ffmpeg, bullmq and hls-maker technologies for video processing.
 
 ## Installation
 
@@ -28,6 +28,7 @@ const linker = new StreamLinker(options);
 // Start livestreaming video
 linker.start();
 ```
+### Tutorial Video
 [![Tutorial Video](http://img.youtube.com/vi/-30Znc7hMwE/0.jpg)](http://www.youtube.com/watch?v=-30Znc7hMwE "Livestream With Stream Linker")
 
 ## API

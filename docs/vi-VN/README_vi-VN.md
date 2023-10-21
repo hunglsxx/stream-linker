@@ -1,8 +1,8 @@
-Chọn ngôn ngữ: [English](../../README.md) | Tiếng Việt
+Chọn ngôn ngữ: [English](README.md) | Tiếng Việt
 
 # StreamLinker
 
-StreamLinker là một thư viện giúp bạn kết nối và phát trực tiếp dữ liệu video từ nguồn đầu vào đến một đường dẫn RTMP. Thư viện này sử dụng công nghệ ffmpeg và hls-maker để xử lý video.
+StreamLinker là một thư viện giúp bạn kết nối và phát trực tiếp dữ liệu video từ nguồn đầu vào đến một đường dẫn RTMP. Thư viện này sử dụng công nghệ ffmpeg, bullmq và hls-maker để xử lý video.
 
 ## Cài đặt
 
