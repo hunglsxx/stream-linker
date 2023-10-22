@@ -17,6 +17,12 @@ export interface StreamLinkerConfig {
     workerConnection?: ConnectionConfig,
     queueConnection?: ConnectionConfig
 }
+
+const processSignal = {
+    STOP: 'stop',
+    PAUSE: 'pause'
+}
+
 const appendStatus = {
     PENDING: 'pending',
     SUCCESS: 'success',
@@ -61,6 +67,9 @@ export class StreamLinker {
     public streamFrames: number;
     public streamLeft: number;
 
+    private _ffmpegProcess: any;
+    private _queueName: string;
+
     constructor(options: StreamLinkerConfig) {
         let that = this;
         this.startInputFilePath = options.startInputFilePath;
@@ -74,6 +83,7 @@ export class StreamLinker {
         this.totalFrames = 0;
         this.streamFrames = 0;
         this.streamLeft = 0;
+        this._queueName = StreamLinker.genQueueName(this.rtmpOuputPath);
 
         this.workerConnection = options.workerConnection || this.defaultConnectionQueue;
 
@@ -83,39 +93,61 @@ export class StreamLinker {
             this.standbyInputFilePath = options.standbyInputFilePath;
         }
 
-        this.queue = new Queue(this.rtmpOuputPath, {
+        this.queue = new Queue(this._queueName, {
             connection: that.queueConnection
         });
 
-        this.worker = new Worker(this.rtmpOuputPath, async (job: Job) => {
-            let maker = new HLSMaker({
-                hlsManifestPath: that.hlsManifestPath,
-                appendMode: job.data.appendMode,
-                endlessMode: job.data.endlessMode,
-                sourceFilePath: job.data.sourceFilePath
-            });
-
-            if (job.data.phase === appendPhase.START) {
-                await maker.conversion(async (progress) => {
-                    that.totalFrames = progress.frames;
-                    that.appendStatus = appendStatus.DISABLED;
-                    await job.updateProgress(progress);
-                });
+        this.worker = new Worker(this._queueName, async (job: Job) => {
+            if (job.name === `signal-${processSignal.STOP}`) {
+                let allJobs = await this.queue.getJobs();
+                for (const rmJob of allJobs) {
+                    if (rmJob.id !== job.id) await rmJob.remove();
+                }
+                return { 'signal': processSignal.STOP }
             } else {
-                that.appendStatus = appendStatus.DISABLED;
-                let concate = await maker.conversion();
-                that.totalFrames += concate.frames;
-                return concate;
+                let maker = new HLSMaker({
+                    hlsManifestPath: that.hlsManifestPath,
+                    appendMode: job.data.appendMode,
+                    endlessMode: job.data.endlessMode,
+                    sourceFilePath: job.data.sourceFilePath
+                });
+
+                if (job.data.phase === appendPhase.START) {
+                    await maker.conversion(async (progress) => {
+                        that.totalFrames = progress.frames;
+                        that.appendStatus = appendStatus.DISABLED;
+                        await job.updateProgress(progress);
+                    });
+                } else {
+                    that.appendStatus = appendStatus.DISABLED;
+                    let concate = await maker.conversion();
+                    that.totalFrames += concate.frames;
+                    return concate;
+                }
             }
         }, {
             connection: that.workerConnection,
-            concurrency: 1
+            concurrency: 1,
+            autorun: false
         });
 
-        this.worker.on('completed', (job: Job, returnvalue: any) => {
-            that.appendStatus = appendStatus.PENDING;
-            if (job.data.phase !== appendPhase.START) {
-                console.log("[Appended new file]", "Current total frames", that.totalFrames);
+        this.worker.on('completed', async (job: Job, returnvalue: any) => {
+            if (returnvalue && returnvalue.signal === processSignal.STOP) {
+                try {
+                    console.log(returnvalue);
+                    await that.worker.close();
+                    await that.queue.close();
+                    that._ffmpegProcess.kill();
+                    process.exit();
+                } catch (error) {
+                    console.log(error);
+                }
+
+            } else {
+                that.appendStatus = appendStatus.PENDING;
+                if (job.data.phase !== appendPhase.START) {
+                    console.log("[Appended new file]", "Current total frames", that.totalFrames);
+                }
             }
         });
 
@@ -132,36 +164,54 @@ export class StreamLinker {
     }
 
     public async start(): Promise<void> {
-        await this.queue.drain();
-        await this.queue.add(this.rtmpOuputPath, {
+        await this.queue.drain(true);
+        // await this._queueInfo();
+        await this.queue.add(this._queueName, {
             sourceFilePath: this.startInputFilePath,
             phase: appendPhase.START,
             appendMode: false,
             endlessMode: true,
         });
+
+        this.worker.run();
+    }
+
+    public static async stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<boolean> {
+        const queueName = StreamLinker.genQueueName(rtmpOuputPath);
+        let queue = new Queue(queueName, {
+            connection: redisConfig || StreamLinker.getDefaultConnectionQueue()
+        });
+        await queue.add(`signal-${processSignal.STOP}`, {
+            signal: processSignal.STOP
+        }, { removeOnComplete: true, removeOnFail: 10 });
+        return true;
+    }
+
+    public static async append(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void> {
+        const queueName = StreamLinker.genQueueName(rtmpOuputPath);
+        let queue = new Queue(queueName, {
+            connection: redisConfig || StreamLinker.getDefaultConnectionQueue()
+        });
+        await queue.add(queueName, {
+            sourceFilePath: sourceFilePath,
+            appendMode: true,
+            endlessMode: true,
+            phase: appendPhase.APPEND
+        }, { priority: 10, removeOnComplete: true, removeOnFail: 10 });
     }
 
     public static getDefaultConnectionQueue(): ConnectionConfig {
         return redisConnectionDefault;
     }
 
-    public static async append(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig) {
-        let queue = new Queue(rtmpOuputPath, {
-            connection: redisConfig || StreamLinker.getDefaultConnectionQueue()
-        });
-        await queue.add(rtmpOuputPath, {
-            sourceFilePath: sourceFilePath,
-            appendMode: true,
-            endlessMode: true,
-            phase: appendPhase.APPEND
-        }, { removeOnComplete: true, removeOnFail: 10 });
+    public static genQueueName(input: string): string {
+        return `stream-linker-${md5(input)}`;
     }
 
     private _hlsManifestPath(): string {
         if (this.hlsManifestPath) return this.hlsManifestPath;
 
         const pathParse = path.parse(this.startInputFilePath);
-        // const prefix = "hls-" + new Date().getTime();
         const prefix = `hls-${md5(this.rtmpOuputPath)}`;
         const dir = `${path.join(pathParse.dir, prefix)}`;
 
@@ -181,8 +231,7 @@ export class StreamLinker {
     }
 
     private _broadcast(): void {
-
-        ffmpeg(this.hlsManifestPath)
+        this._ffmpegProcess = ffmpeg(this.hlsManifestPath)
             .inputOption([
                 '-re',
                 '-live_start_index', '0'
@@ -210,23 +259,33 @@ export class StreamLinker {
             })
             .on('end', () => {
                 console.log('Livestream ended');
-            })
-            .run();
+            });
+
+        this._ffmpegProcess.run();
     }
 
     private async _apendDefault(): Promise<void> {
         if (this.streamLeft < 1000 && this.appendStatus == appendStatus.PENDING) {
-            await this.queue.add(this.hlsManifestPath, {
+            await this.queue.add(this._queueName, {
                 sourceFilePath: this.standbyInputFilePath || this.startInputFilePath,
                 appendMode: true,
                 endlessMode: true,
                 phase: appendPhase.APPEND
             }, { priority: 9999, removeOnComplete: true, removeOnFail: 10 });
-            console.log("Append default", "reason timeleft", this.streamLeft);
+            console.log("Append default", "reason frames left", this.streamLeft);
         }
     }
 
     private _isExistManifestPath(): boolean {
         return fs.existsSync(this.hlsManifestPath);
+    }
+
+    private async _queueInfo(): Promise<void> {
+        const jobCounts = await this.queue.getJobCounts();
+        let info: Array<string> = [];
+        for (let i in jobCounts) {
+            info.push(`${i} ${jobCounts[i]}`);
+        }
+        console.log("Queue information:", info.join(' | '));
     }
 }

@@ -24,14 +24,19 @@ export declare class StreamLinker {
     totalFrames: number;
     streamFrames: number;
     streamLeft: number;
+    private _ffmpegProcess;
+    private _queueName;
     constructor(options: StreamLinkerConfig);
     get defaultConnectionQueue(): ConnectionConfig;
     start(): Promise<void>;
-    static getDefaultConnectionQueue(): ConnectionConfig;
+    static stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<boolean>;
     static append(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>;
+    static getDefaultConnectionQueue(): ConnectionConfig;
+    static genQueueName(input: string): string;
     private _hlsManifestPath;
     private _isInitStream;
     private _broadcast;
     private _apendDefault;
     private _isExistManifestPath;
+    private _queueInfo;
 }

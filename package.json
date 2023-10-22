@@ -1,6 +1,6 @@
 {
     "name": "stream-linker",
-    "version": "1.0.4",
+    "version": "1.1.0",
     "description": "StreamLinker: Effortlessly integrate continuous live streaming with dynamic file appending for uninterrupted broadcasts.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
