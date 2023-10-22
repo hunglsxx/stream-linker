@@ -63,4 +63,15 @@ program.command('append')
         throw e;
     });
 });
+program.command('stop')
+    .description('Graceful Shutdown Your Live Stream using StreamLinker')
+    .argument('<rtmp>', 'RTMP Output URL for Live Streaming', isRtmp)
+    .action((rtmp) => {
+    index_1.StreamLinker.stop(rtmp).then(() => {
+        console.log(`Stoped ${rtmp}`);
+        process.exit();
+    }).catch((e) => {
+        throw e;
+    });
+});
 program.parse();
