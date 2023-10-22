@@ -1,4 +1,4 @@
-Read this in other languages: English | [Tiếng Việt](./docs/vi-VN/README_vi-VN.md)
+Read this in other languages: English | [Tiếng Việt](../vi-VN/README_vi-VN.md)
 
 # StreamLinker
 
