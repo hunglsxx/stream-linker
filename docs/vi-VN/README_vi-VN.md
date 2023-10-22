@@ -100,9 +100,7 @@ const linker = new StreamLinker(options);
 // Bắt đầu truyền video trực tiếp
 linker.start();
 
-// Thêm
-
- video bổ sung vào luồng trực tiếp
+// Thêmvideo bổ sung vào luồng trực tiếp
 StreamLinker.append('/path/to/another/source/file', 'rtmp://example.com/live/streamkey');
 
 // Dừng việc truyền video
