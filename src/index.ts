@@ -40,7 +40,8 @@ const broadcastStatus = {
 
 const appendPhase = {
     START: 'start',
-    APPEND: 'append'
+    APPEND: 'append',
+    INSERT: 'insert'
 };
 
 const redisConnectionDefault: ConnectionConfig = {
@@ -105,24 +106,53 @@ export class StreamLinker {
                 }
                 return { 'signal': processSignal.STOP }
             } else {
-                let maker = new HLSMaker({
+                let makerData = {
                     hlsManifestPath: that.hlsManifestPath,
                     appendMode: job.data.appendMode,
                     endlessMode: job.data.endlessMode,
                     sourceFilePath: job.data.sourceFilePath
-                });
+                }
 
-                if (job.data.phase === appendPhase.START) {
-                    await maker.conversion(async (progress) => {
-                        that.totalFrames = progress.frames;
+                switch (job.data.phase) {
+                    case appendPhase.START:
+                        let makerStart = new HLSMaker(makerData);
+                        await makerStart.conversion(async (progress) => {
+                            that.totalFrames = progress.frames;
+                            that.appendStatus = appendStatus.DISABLED;
+                            await job.updateProgress(progress);
+                        });
+                        break;
+                    case appendPhase.INSERT:
                         that.appendStatus = appendStatus.DISABLED;
-                        await job.updateProgress(progress);
-                    });
-                } else {
-                    that.appendStatus = appendStatus.DISABLED;
-                    let concate = await maker.conversion();
-                    that.totalFrames += concate.frames;
-                    return concate;
+
+                        let sourceHlsManifestPath = path.join(
+                            (path.parse(makerData.hlsManifestPath)).dir,
+                            `${(path.parse(makerData.sourceFilePath)).name}.m3u8`
+                        );
+
+                        let sourceHls = new HLSMaker({
+                            sourceFilePath: makerData.sourceFilePath,
+                            hlsManifestPath: sourceHlsManifestPath,
+                            appendMode: false,
+                            endlessMode: makerData.endlessMode
+                        });
+
+                        let makerInsert = await sourceHls.conversion();
+
+                        await HLSMaker.insert({
+                            hlsManifestPath: makerData.hlsManifestPath,
+                            sourceHlsManifestPath: sourceHlsManifestPath,
+                            splicePercent: (((that.totalFrames - that.streamLeft) / that.totalFrames) * 100)
+                        });
+
+                        that.totalFrames += makerInsert.frames;
+                        return makerInsert;
+                    default:
+                        let makerAppend = new HLSMaker(makerData);
+                        that.appendStatus = appendStatus.DISABLED;
+                        let concated = await makerAppend.conversion();
+                        that.totalFrames += concated.frames;
+                        return concated;
                 }
             }
         }, {
@@ -197,6 +227,19 @@ export class StreamLinker {
             appendMode: true,
             endlessMode: true,
             phase: appendPhase.APPEND
+        }, { priority: 10, removeOnComplete: true, removeOnFail: 10 });
+    }
+
+    public static async insert(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void> {
+        const queueName = StreamLinker.genQueueName(rtmpOuputPath);
+        let queue = new Queue(queueName, {
+            connection: redisConfig || StreamLinker.getDefaultConnectionQueue()
+        });
+        await queue.add(queueName, {
+            sourceFilePath: sourceFilePath,
+            appendMode: false,
+            endlessMode: true,
+            phase: appendPhase.INSERT
         }, { priority: 10, removeOnComplete: true, removeOnFail: 10 });
     }
 

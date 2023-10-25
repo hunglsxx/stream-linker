@@ -8,6 +8,7 @@ const fluent_ffmpeg_1 = __importDefault(require("fluent-ffmpeg"));
 const bullmq_1 = require("bullmq");
 const fs_1 = __importDefault(require("fs"));
 const hls_maker_1 = require("hls-maker");
+// import { HLSMaker } from '../../hls-maker/src/index';
 const path_1 = __importDefault(require("path"));
 const md5_1 = __importDefault(require("md5"));
 const processSignal = {
@@ -29,7 +30,8 @@ const broadcastStatus = {
 };
 const appendPhase = {
     START: 'start',
-    APPEND: 'append'
+    APPEND: 'append',
+    INSERT: 'insert'
 };
 const redisConnectionDefault = {
     host: '127.0.0.1',
@@ -68,24 +70,44 @@ class StreamLinker {
                 return { 'signal': processSignal.STOP };
             }
             else {
-                let maker = new hls_maker_1.HLSMaker({
+                let makerData = {
                     hlsManifestPath: that.hlsManifestPath,
                     appendMode: job.data.appendMode,
                     endlessMode: job.data.endlessMode,
                     sourceFilePath: job.data.sourceFilePath
-                });
-                if (job.data.phase === appendPhase.START) {
-                    await maker.conversion(async (progress) => {
-                        that.totalFrames = progress.frames;
+                };
+                switch (job.data.phase) {
+                    case appendPhase.START:
+                        let makerStart = new hls_maker_1.HLSMaker(makerData);
+                        await makerStart.conversion(async (progress) => {
+                            that.totalFrames = progress.frames;
+                            that.appendStatus = appendStatus.DISABLED;
+                            await job.updateProgress(progress);
+                        });
+                        break;
+                    case appendPhase.INSERT:
                         that.appendStatus = appendStatus.DISABLED;
-                        await job.updateProgress(progress);
-                    });
-                }
-                else {
-                    that.appendStatus = appendStatus.DISABLED;
-                    let concate = await maker.conversion();
-                    that.totalFrames += concate.frames;
-                    return concate;
+                        let sourceHlsManifestPath = path_1.default.join((path_1.default.parse(makerData.hlsManifestPath)).dir, `${(path_1.default.parse(makerData.sourceFilePath)).name}.m3u8`);
+                        let sourceHls = new hls_maker_1.HLSMaker({
+                            sourceFilePath: makerData.sourceFilePath,
+                            hlsManifestPath: sourceHlsManifestPath,
+                            appendMode: false,
+                            endlessMode: makerData.endlessMode
+                        });
+                        let makerInsert = await sourceHls.conversion();
+                        await hls_maker_1.HLSMaker.insert({
+                            hlsManifestPath: makerData.hlsManifestPath,
+                            sourceHlsManifestPath: sourceHlsManifestPath,
+                            splicePercent: (((that.totalFrames - that.streamLeft) / that.totalFrames) * 100)
+                        });
+                        that.totalFrames += makerInsert.frames;
+                        return makerInsert;
+                    default:
+                        let makerAppend = new hls_maker_1.HLSMaker(makerData);
+                        that.appendStatus = appendStatus.DISABLED;
+                        let concated = await makerAppend.conversion();
+                        that.totalFrames += concated.frames;
+                        return concated;
                 }
             }
         }, {
@@ -154,6 +176,18 @@ class StreamLinker {
             appendMode: true,
             endlessMode: true,
             phase: appendPhase.APPEND
+        }, { priority: 10, removeOnComplete: true, removeOnFail: 10 });
+    }
+    static async insert(sourceFilePath, rtmpOuputPath, redisConfig) {
+        const queueName = StreamLinker.genQueueName(rtmpOuputPath);
+        let queue = new bullmq_1.Queue(queueName, {
+            connection: redisConfig || StreamLinker.getDefaultConnectionQueue()
+        });
+        await queue.add(queueName, {
+            sourceFilePath: sourceFilePath,
+            appendMode: false,
+            endlessMode: true,
+            phase: appendPhase.INSERT
         }, { priority: 10, removeOnComplete: true, removeOnFail: 10 });
     }
     static getDefaultConnectionQueue() {

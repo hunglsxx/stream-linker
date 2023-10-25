@@ -31,6 +31,7 @@ export declare class StreamLinker {
     start(): Promise<void>;
     static stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<boolean>;
     static append(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>;
+    static insert(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>;
     static getDefaultConnectionQueue(): ConnectionConfig;
     static genQueueName(input: string): string;
     private _hlsManifestPath;
