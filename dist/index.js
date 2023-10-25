@@ -8,7 +8,6 @@ const fluent_ffmpeg_1 = __importDefault(require("fluent-ffmpeg"));
 const bullmq_1 = require("bullmq");
 const fs_1 = __importDefault(require("fs"));
 const hls_maker_1 = require("hls-maker");
-// import { HLSMaker } from '../../hls-maker/src/index';
 const path_1 = __importDefault(require("path"));
 const md5_1 = __importDefault(require("md5"));
 const processSignal = {
