@@ -53,6 +53,8 @@ class StreamLinker {
         this._queueName = StreamLinker.genQueueName(this.rtmpOuputPath);
         this.workerConnection = options.workerConnection || this.defaultConnectionQueue;
         this.queueConnection = options.queueConnection || this.defaultConnectionQueue;
+        this.ffmpegHLSOptions = options.ffmpegHLSOptions || { input: [], output: [] };
+        this.ffmpegStreamOptions = options.ffmpegStreamOptions || this.defaultFfmpegStreamOptions;
         if (options.standbyInputFilePath && fs_1.default.existsSync(options.standbyInputFilePath)) {
             this.standbyInputFilePath = options.standbyInputFilePath;
         }
@@ -75,6 +77,12 @@ class StreamLinker {
                     endlessMode: job.data.endlessMode,
                     sourceFilePath: job.data.sourceFilePath
                 };
+                if (that.ffmpegHLSOptions.input.length) {
+                    makerData['ffmpegInputOptions'] = that.ffmpegHLSOptions.input;
+                }
+                if (that.ffmpegHLSOptions.output.length) {
+                    makerData['ffmpegOutputOptions'] = that.ffmpegHLSOptions.output;
+                }
                 switch (job.data.phase) {
                     case appendPhase.START:
                         let makerStart = new hls_maker_1.HLSMaker(makerData);
@@ -143,6 +151,20 @@ class StreamLinker {
     }
     get defaultConnectionQueue() {
         return redisConnectionDefault;
+    }
+    get defaultFfmpegStreamOptions() {
+        return {
+            input: [
+                '-re',
+                '-live_start_index', '0'
+            ],
+            output: [
+                '-c', 'copy',
+                '-preset', 'veryfast',
+                '-f', 'flv',
+                '-flvflags', 'no_duration_filesize'
+            ]
+        };
     }
     async start() {
         await this.queue.drain(true);
@@ -215,16 +237,8 @@ class StreamLinker {
     }
     _broadcast() {
         this._ffmpegProcess = (0, fluent_ffmpeg_1.default)(this.hlsManifestPath)
-            .inputOption([
-            '-re',
-            '-live_start_index', '0'
-        ])
-            .outputOptions([
-            '-c', 'copy',
-            '-preset', 'veryfast',
-            '-f', 'flv',
-            '-flvflags', 'no_duration_filesize'
-        ])
+            .inputOption(this.ffmpegStreamOptions.input)
+            .outputOptions(this.ffmpegStreamOptions.output)
             .output(this.rtmpOuputPath)
             .on('error', (err, stdout, stderr) => {
             console.error('Error:', err.message);

@@ -53,6 +53,12 @@ StreamLinker.append(sourceFilePath: string, rtmpOuputPath: string, redisConfig?:
 ```
 Appends video to the live stream. This method allows you to add additional segments to the ongoing stream.
 
+#### Method: insert
+```javascript
+StreamLinker.insert(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>
+```
+Insert video to the live stream. This method allows you to insert additional segments to the ongoing stream.
+
 #### Method: stop
 ```javascript
 StreamLinker.stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<boolean>
@@ -67,7 +73,9 @@ interface StreamLinkerConfig {
     standbyInputFilePath?: string;
     startInputFilePath: string;
     workerConnection?: ConnectionConfig,
-    queueConnection?: ConnectionConfig
+    queueConnection?: ConnectionConfig,
+    ffmpegHLSOptions?: ffmpegOptions,
+    ffmpegStreamOptions?: ffmpegOptions
 }
 ```
 - `rtmpOuputPath` (string): Destination RTMP stream.
@@ -80,18 +88,47 @@ interface StreamLinkerConfig {
 
 - `queueConnection` (optional, ConnectionConfig): Redis connection for the queue.
 
+- `ffmpegHLSOptions` (optional) Ffmpeg options for conversion input video to HLS
+
+- `ffmpegStreamOptions` (optional) Ffmpeg options for live streaming
+
 Configuration for StreamLinker. Includes necessary information for initializing and configuring the livestream.
 
 ## Example
 ```javascript
 const { StreamLinker, StreamLinkerConfig } = require('stream-linker');
 
+const redisConfig = {
+    host: '127.0.0.1', 
+    port: 6379,
+    username: 'default',
+    password: 'passWord',
+    db: 0
+}
+
 const options: StreamLinkerConfig = {
     rtmpOuputPath: 'rtmp://example.com/live/streamkey',
     startInputFilePath: '/path/to/source/video.mp4',
     standbyInputFilePath: '/path/to/standby/video.mp4', // Optional
-    workerConnection: { host: '127.0.0.1', port: 6380 }, // Optional
-    queueConnection: { host: '127.0.0.1', port: 6381 } // Optional
+    workerConnection: redisConfig, // Optional
+    queueConnection: redisConfig, // Optional
+    ffmpegStreamOptions: {
+        input: [
+            '-re', 
+            '-live_start_index', '50'
+        ], 
+        output: [
+            '-c', 'copy', 
+            '-preset', 'veryfast', 
+            '-f', 'flv', 
+            '-flvflags', 'no_duration_filesize'
+        ]
+    }, // Optional
+    ffmpegHLSOptions: { 
+        input: ['...'], 
+        output: ['...']
+    }, // Optional
+    
 };
 
 const linker = new StreamLinker(options);
@@ -99,11 +136,17 @@ const linker = new StreamLinker(options);
 // Start livestreaming video
 linker.start();
 
-// Append additional video to the live stream
-StreamLinker.append('/path/to/another/source/file', 'rtmp://example.com/live/streamkey');
+// Append additional video to the live stream 
+// redisConfig param is optional
+StreamLinker.append('/path/to/another/source/file', 'rtmp://example.com/live/streamkey', redisConfig);
+
+// Insert additional video to the live stream
+// redisConfig param is optional
+StreamLinker.insert('/path/to/another/source/file', 'rtmp://example.com/live/streamkey', redisConfig);
 
 // Stop the livestream
-StreamLinker.stop('rtmp://example.com/live/streamkey');
+// redisConfig param is optional
+StreamLinker.stop('rtmp://example.com/live/streamkey', redisConfig);
 ```
 
 ## Command Line Interface (CLI)
@@ -118,12 +161,18 @@ npm install -g stream-linker
 
 ### Start Command
 Launch your stream with StreamLinker:
+You can use `-h` or `--help` to see the available options.
+```bash
+stream-linker -h
+```
 ```bash
 stream-linker start -i <inputPath> -o <outputUrl> [-s <standbyPath>]
 ```
 - ```-i, --input <inputPath>```: Path to the input video file. Must be specified.
 - ```-o, --output <outputUrl>```: RTMP output URL for live streaming. Must be specified.
 - ```-s, --standby <standbyPath>``` (optional): Path to the standby video for no signal.
+- ... use `stream-linker start -h` to see the available options.
+
 
 Example:
 ```bash
@@ -137,10 +186,25 @@ stream-linker append -i <inputPath> -o <outputUrl>
 ```
 - ```-i, --input <inputPath>```: Path to the input video file. Must be specified.
 - ```-o, --output <outputUrl>```: RTMP output URL for live streaming. Must be specified.
+- ... use `stream-linker append -h` to see the available options.
 
 Example:
 ```bash
 stream-linker append -i /path/to/another/video.mp4 -o rtmp://example.com/live/streamkey
+```
+
+### Insert Command
+Insert a video to your live stream:
+```bash
+stream-linker insert -i <inputPath> -o <outputUrl>
+```
+- ```-i, --input <inputPath>```: Path to the input video file. Must be specified.
+- ```-o, --output <outputUrl>```: RTMP output URL for live streaming. Must be specified.
+- ... use `stream-linker insert -h` to see the available options.
+
+Example:
+```bash
+stream-linker insert -i /path/to/another/video.mp4 -o rtmp://example.com/live/streamkey
 ```
 
 ### Stop Command
@@ -149,6 +213,7 @@ Stop a livestream for a specific output URL:
 stream-linker stop <outputUrl>
 ```
 - ```<outputUrl>```: RTMP output URL for live streaming. Must be specified.
+- ... use `stream-linker stop -h` to see the available options.
 
 Example:
 ```bash

@@ -8,14 +8,26 @@ import md5 from 'md5';
 export interface ConnectionConfig {
     host: string
     port: number;
+    username?: string;
+    password?: string;
+    db?: number
+}
+
+export interface ffmpegOptions {
+    input: Array<string>,
+    output: Array<string>
 }
 
 export interface StreamLinkerConfig {
     rtmpOuputPath: string;
     standbyInputFilePath?: string;
     startInputFilePath: string;
+
     workerConnection?: ConnectionConfig,
-    queueConnection?: ConnectionConfig
+    queueConnection?: ConnectionConfig,
+
+    ffmpegHLSOptions?: ffmpegOptions,
+    ffmpegStreamOptions?: ffmpegOptions
 }
 
 const processSignal = {
@@ -71,6 +83,9 @@ export class StreamLinker {
     private _ffmpegProcess: any;
     private _queueName: string;
 
+    public ffmpegStreamOptions: ffmpegOptions;
+    public ffmpegHLSOptions: ffmpegOptions;
+
     constructor(options: StreamLinkerConfig) {
         let that = this;
         this.startInputFilePath = options.startInputFilePath;
@@ -87,8 +102,10 @@ export class StreamLinker {
         this._queueName = StreamLinker.genQueueName(this.rtmpOuputPath);
 
         this.workerConnection = options.workerConnection || this.defaultConnectionQueue;
-
         this.queueConnection = options.queueConnection || this.defaultConnectionQueue;
+
+        this.ffmpegHLSOptions = options.ffmpegHLSOptions || { input: [], output: [] };
+        this.ffmpegStreamOptions = options.ffmpegStreamOptions || this.defaultFfmpegStreamOptions;
 
         if (options.standbyInputFilePath && fs.existsSync(options.standbyInputFilePath)) {
             this.standbyInputFilePath = options.standbyInputFilePath;
@@ -106,11 +123,19 @@ export class StreamLinker {
                 }
                 return { 'signal': processSignal.STOP }
             } else {
-                let makerData = {
+                let makerData: any = {
                     hlsManifestPath: that.hlsManifestPath,
                     appendMode: job.data.appendMode,
                     endlessMode: job.data.endlessMode,
                     sourceFilePath: job.data.sourceFilePath
+                }
+
+                if (that.ffmpegHLSOptions.input.length) {
+                    makerData['ffmpegInputOptions'] = that.ffmpegHLSOptions.input;
+                }
+
+                if (that.ffmpegHLSOptions.output.length) {
+                    makerData['ffmpegOutputOptions'] = that.ffmpegHLSOptions.output;
                 }
 
                 switch (job.data.phase) {
@@ -191,6 +216,21 @@ export class StreamLinker {
 
     get defaultConnectionQueue(): ConnectionConfig {
         return redisConnectionDefault;
+    }
+
+    get defaultFfmpegStreamOptions(): ffmpegOptions {
+        return {
+            input: [
+                '-re',
+                '-live_start_index', '0'
+            ],
+            output: [
+                '-c', 'copy',
+                '-preset', 'veryfast',
+                '-f', 'flv',
+                '-flvflags', 'no_duration_filesize'
+            ]
+        }
     }
 
     public async start(): Promise<void> {
@@ -275,16 +315,8 @@ export class StreamLinker {
 
     private _broadcast(): void {
         this._ffmpegProcess = ffmpeg(this.hlsManifestPath)
-            .inputOption([
-                '-re',
-                '-live_start_index', '0'
-            ])
-            .outputOptions([
-                '-c', 'copy',
-                '-preset', 'veryfast',
-                '-f', 'flv',
-                '-flvflags', 'no_duration_filesize'
-            ])
+            .inputOption(this.ffmpegStreamOptions.input)
+            .outputOptions(this.ffmpegStreamOptions.output)
             .output(this.rtmpOuputPath)
             .on('error', (err, stdout, stderr) => {
                 console.error('Error:', err.message);

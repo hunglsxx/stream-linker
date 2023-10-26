@@ -2,6 +2,13 @@ import { Queue, Worker } from 'bullmq';
 export interface ConnectionConfig {
     host: string;
     port: number;
+    username?: string;
+    password?: string;
+    db?: number;
+}
+export interface ffmpegOptions {
+    input: Array<string>;
+    output: Array<string>;
 }
 export interface StreamLinkerConfig {
     rtmpOuputPath: string;
@@ -9,6 +16,8 @@ export interface StreamLinkerConfig {
     startInputFilePath: string;
     workerConnection?: ConnectionConfig;
     queueConnection?: ConnectionConfig;
+    ffmpegHLSOptions?: ffmpegOptions;
+    ffmpegStreamOptions?: ffmpegOptions;
 }
 export declare class StreamLinker {
     rtmpOuputPath: string;
@@ -26,8 +35,11 @@ export declare class StreamLinker {
     streamLeft: number;
     private _ffmpegProcess;
     private _queueName;
+    ffmpegStreamOptions: ffmpegOptions;
+    ffmpegHLSOptions: ffmpegOptions;
     constructor(options: StreamLinkerConfig);
     get defaultConnectionQueue(): ConnectionConfig;
+    get defaultFfmpegStreamOptions(): ffmpegOptions;
     start(): Promise<void>;
     static stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<boolean>;
     static append(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>;

@@ -1,8 +1,6 @@
-Đọc bằng các ngôn ngữ khác: [English](../en-US/README_en-US.md) | Tiếng Việt
-
 # StreamLinker
 
-StreamLinker là một thư viện cho phép bạn kết nối và truyền dữ liệu video từ nguồn đầu vào đến một đường dẫn RTMP. Thư viện này sử dụng công nghệ ffmpeg, bullmq và hls-maker để xử lý video.
+StreamLinker là một thư viện cho phép bạn kết nối và truyền video trực tiếp từ một nguồn đầu vào đến một đường dẫn RTMP. Thư viện này sử dụng các công nghệ ffmpeg, bullmq và hls-maker để xử lý video.
 
 ## Cài đặt
 
@@ -11,17 +9,17 @@ npm install stream-linker
 ```
 
 ## Ghi chú
-- Hãy chắc chắn rằng bạn đã cài đặt ffmpeg và các thư viện cần thiết trước khi sử dụng thư viện này.
-- Hãy chắc chắn rằng bạn đã cài đặt và đang chạy Redis trên hệ thống của bạn, vì StreamLinker sử dụng BullMQ, một thư viện hàng đợi dựa trên Redis. Bạn có thể tham khảo tài liệu BullMQ để biết cách cấu hình Redis mở rộng.
+- Đảm bảo bạn đã cài đặt ffmpeg và các thư viện cần thiết trước khi sử dụng thư viện này.
+- Đảm bảo bạn đã cài đặt và chạy Redis trên hệ thống của bạn, vì StreamLinker sử dụng BullMQ, một thư viện hàng đợi dựa trên Redis. Bạn có thể tham khảo tài liệu của BullMQ để biết cách cấu hình Redis mở rộng.
 
-## Cách sử dụng
+## Sử dụng
 ```javascript
 const { StreamLinker, StreamLinkerConfig } = require('stream-linker');
 
 const options: StreamLinkerConfig = {
     rtmpOuputPath: 'rtmp://example.com/live/streamkey',
-    startInputFilePath: '/path/to/your/source/file',
-    // ... các tùy chọn khác nếu cần
+    startInputFilePath: '/đường/dẫn/đến/tập/tin/nguồn/của/bạn',
+    // ... các tùy chọn khác cần thiết
 };
 
 const linker = new StreamLinker(options);
@@ -29,9 +27,8 @@ const linker = new StreamLinker(options);
 // Bắt đầu truyền video trực tiếp
 linker.start();
 ```
-
-### Video Hướng dẫn
-[![Video Hướng dẫn](http://img.youtube.com/vi/-30Znc7hMwE/0.jpg)](http://www.youtube.com/watch?v=-30Znc7hMwE "Truyền video trực tiếp với Stream Linker")
+### Video hướng dẫn
+[![Video hướng dẫn](http://img.youtube.com/vi/-30Znc7hMwE/0.jpg)](http://www.youtube.com/watch?v=-30Znc7hMwE "Truyền trực tiếp với Stream Linker")
 
 ## API
 
@@ -52,13 +49,19 @@ Khởi tạo truyền video trực tiếp. Phương thức này sẽ bắt đầ
 ```javascript
 StreamLinker.append(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>
 ```
-Thêm video vào luồng trực tiếp. Phương thức này cho phép bạn thêm các phân đoạn bổ sung vào luồng đang diễn ra.
+Thêm video vào luồng trực tiếp. Phương thức này cho phép bạn thêm các đoạn video bổ sung vào cuối luồng đang tiếp diễn.
+
+#### Phương thức: insert
+```javascript
+StreamLinker.insert(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>
+```
+Chèn video vào luồng trực tiếp. Phương thức này cho phép bạn chèn các đoạn video bổ sung vào giữa luồng đang tiếp diễn.
 
 #### Phương thức: stop
 ```javascript
 StreamLinker.stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<boolean>
 ```
-Dừng việc truyền video cho đường dẫn RTMP được chỉ định.
+Dừng truyền video trực tiếp cho đường dẫn đầu ra RTMP cụ thể.
 
 ### Cấu hình
 Giao diện: StreamLinkerConfig
@@ -68,18 +71,24 @@ interface StreamLinkerConfig {
     standbyInputFilePath?: string;
     startInputFilePath: string;
     workerConnection?: ConnectionConfig,
-    queueConnection?: ConnectionConfig
+    queueConnection?: ConnectionConfig,
+    ffmpegHLSOptions?: ffmpegOptions,
+    ffmpegStreamOptions?: ffmpegOptions
 }
 ```
-- `rtmpOuputPath` (chuỗi): Luồng đích RTMP.
+- `rtmpOuputPath` (chuỗi): Luồng RTMP đích.
 
 - `startInputFilePath` (chuỗi): Đường dẫn đến tệp video nguồn.
 
-- `standbyInputFilePath` (tùy chọn, chuỗi): Đường dẫn đến tệp video dự phòng. Kích hoạt khi video nguồn kết thúc. Nếu không được cung cấp, video nguồn sẽ được lặp lại.
+- `standbyInputFilePath` (tùy chọn, chuỗi): Đường dẫn đến một tệp video sao lưu. Kích hoạt khi video nguồn kết thúc. Nếu không cung cấp, video nguồn sẽ được lặp lại.
 
 - `workerConnection` (tùy chọn, ConnectionConfig): Kết nối Redis cho worker.
 
 - `queueConnection` (tùy chọn, ConnectionConfig): Kết nối Redis cho hàng đợi.
+
+- `ffmpegHLSOptions` (tùy chọn) Tùy chọn ffmpeg cho việc chuyển đổi video đầu vào thành HLS.
+
+- `ffmpegStreamOptions` (tùy chọn) Tùy chọn ffmpeg cho truyền video trực tiếp.
 
 Cấu hình cho StreamLinker. Bao gồm thông tin cần thiết để khởi tạo và cấu hình truyền video trực tiếp.
 
@@ -87,12 +96,37 @@ Cấu hình cho StreamLinker. Bao gồm thông tin cần thiết để khởi t�
 ```javascript
 const { StreamLinker, StreamLinkerConfig } = require('stream-linker');
 
+const redisConfig = {
+    host: '127.0.0.1', 
+    port: 6379,
+    username: 'default',
+    password: 'password',
+    db: 0
+}
+
 const options: StreamLinkerConfig = {
     rtmpOuputPath: 'rtmp://example.com/live/streamkey',
-    startInputFilePath: '/path/to/source/video.mp4',
-    standbyInputFilePath: '/path/to/standby/video.mp4', // Tùy chọn
-    workerConnection: { host: '127.0.0.1', port: 6380 }, // Tùy chọn
-    queueConnection: { host: '127.0.0.1', port: 6381 } // Tùy chọn
+    startInputFilePath: '/đường/dẫn/đến/video/nguồn.mp4',
+    standbyInputFilePath: '/đường/dẫn/đến/video/sao/lưu.mp4', // Tùy chọn
+    workerConnection: redisConfig, // Tùy chọn
+    queueConnection: redisConfig, // Tùy chọn
+    ffmpegStreamOptions: {
+        input: [
+            '-re', 
+            '-live_start_index', '50'
+        ], 
+        output: [
+            '-c', 'copy', 
+            '-preset', 'veryfast', 
+            '-f', 'flv', 
+            '-flvflags', 'no_duration_filesize'
+        ]
+    }, // Tùy chọn
+    ffmpegHLSOptions: { 
+        input: ['...'], 
+        output: ['...']
+    }, // Tùy chọn
+    
 };
 
 const linker = new StreamLinker(options);
@@ -100,68 +134,95 @@ const linker = new StreamLinker(options);
 // Bắt đầu truyền video trực tiếp
 linker.start();
 
-// Thêm video bổ sung vào luồng trực tiếp
-StreamLinker.append('/path/to/another/source/file', 'rtmp://example.com/live/streamkey');
+// Thêm video bổ sung vào luồng trực tiếp 
+// Tham số redisConfig là tùy chọn
+StreamLinker.append('/đường/dẫn/đến/tệp/nguồn/khác', 'rtmp://example.com/live/streamkey', redisConfig);
 
-// Dừng việc truyền video
-StreamLinker.stop('rtmp://example.com/live/streamkey');
+// Chèn video bổ sung vào luồng trực tiếp
+// Tham số redisConfig là tùy chọn
+StreamLinker.insert('/đường/dẫn/đến/tệp/nguồn/khác', 'rtmp://example.com/live/streamkey', redisConfig);
+
+// Dừng truyền video trực tiếp
+// Tham số redisConfig là tùy chọn
+StreamLinker.stop('rtmp://example.com/live/streamkey', redisConfig);
 ```
 
-## Command Line Interface (CLI)
-StreamLinker cung cấp giao diện dòng lệnh (CLI) cho việc truyền video một cách dễ dàng. Dưới đây là các lệnh có sẵn và cách sử dụng của chúng:
+## Giao diện dòng lệnh (CLI)
+StreamLinker cung cấp một giao diện dòng lệnh cho truyền video mượt mà. Dưới đây là các lệnh có sẵn và cách sử dụng của chúng:
 
 ### Cài đặt
-Cài đặt StreamLinker toàn cầu bằng npm:
+Cài đặt StreamLinker toàn cục bằng npm:
 
 ```bash
 npm install -g stream-linker
 ```
 
 ### Lệnh Start
-Khởi đầu luồng trực tiếp với StreamLinker:
+Bắt đầu luồng của bạn với StreamLinker:
+Bạn có thể sử dụng `-h` hoặc `--help` để xem các tùy chọn có sẵn
 ```bash
-stream-linker start -i <inputPath> -o <outputUrl> [-s <standbyPath>]
+stream-linker -h
 ```
-- ```-i, --input <inputPath>```: Đường dẫn đến tệp video đầu vào. Bắt buộc phải được chỉ định.
-- ```-o, --output <outputUrl>```: URL đầu ra RTMP cho việc truyền video trực tiếp. Bắt buộc phải được chỉ định.
-- ```-s, --standby <standbyPath>``` (tùy chọn): Đường dẫn đến tệp video dự phòng khi không có tín hiệu.
+```bash
+stream-linker start -i <đường/dẫn/nguồn> -o <đường/dẫn/ra> [-s <đường/dẫn/sao/lưu>]
+```
+- ```-i, --input <đường/dẫn/nguồn>```: Đường dẫn đến tệp video nguồn. Phải được chỉ định.
+- ```-o, --output <đường/dẫn/ra>```: Đường dẫn đầu ra RTMP cho truyền video trực tiếp. Phải được chỉ định.
+- ```-s, --standby <đường/dẫn/sao/lưu>``` (tùy chọn): Đường dẫn đến video sao lưu cho trường hợp không có tín hiệu.
+- ... sử dụng `stream-linker start -h` để xem các tùy chọn có sẵn
 
 Ví dụ:
 ```bash
-stream-linker start -i /path/to/input/video.mp4 -o rtmp://example.com/live/streamkey -s /path/to/standby/video.mp4
+stream-linker start -i /đường/dẫn/đến/tệp/nguồn/video.mp4 -o rtmp://example.com/live/streamkey -s /đường/dẫn/đến/tệp/sao/lưu/video.mp4
 ```
 
 ### Lệnh Append
-Thêm video vào luồng trực tiếp của bạn:
+Thêm một video vào luồng trực tiếp của bạn:
 ```bash
-stream-linker append -i <inputPath> -o <outputUrl>
+stream-linker append -i <đường/dẫn/nguồn> -o <đường/dẫn/ra>
 ```
-- ```-i, --input <inputPath>```: Đường dẫn đến tệp video đầu vào. Bắt buộc phải được chỉ định.
-- ```-o, --output <outputUrl>```: URL đầu ra RTMP cho việc truyền video trực tiếp. Bắt buộc phải được chỉ định.
+- ```-i, --input <đường/dẫn/nguồn>```: Đường dẫn đến tệp video nguồn. Phải được chỉ định.
+- ```-o, --output <đường/dẫn/ra>```: Đường dẫn đầu ra RTMP cho truyền video trực tiếp. Phải được chỉ định.
+- ... sử dụng `stream-linker append -h` để xem các tùy chọn có sẵn
 
 Ví dụ:
 ```bash
-stream-linker append -i /path/to/another/video.mp4 -o rtmp://example.com/live/streamkey
+stream-linker append -i /đường/dẫn/đến/video/khác.mp4 -o rtmp://example.com/live/streamkey
+```
+
+### Lệnh Insert
+Chèn một video vào luồng trực tiếp của bạn:
+```bash
+stream-linker insert -i <đường/dẫn/nguồn> -o <đường/dẫn/ra>
+```
+- ```-i, --input <đường/dẫn/nguồn>```: Đường dẫn đến tệp video nguồn. Phải được chỉ định.
+- ```-o, --output <đường/dẫn/ra>```: Đường dẫn đầu ra RTMP cho truyền video trực tiếp. Phải được chỉ định.
+- ... sử dụng `stream-linker insert -h` để xem các tùy chọn có sẵn
+
+Ví dụ:
+```bash
+stream-linker insert -i /đường/dẫn/đến/video/khác.mp4 -o rtmp://example.com/live/streamkey
 ```
 
 ### Lệnh Stop
-Dừng việc truyền video trực tiếp cho một URL đầu ra cụ thể:
+Dừng truyền video trực tiếp cho một URL đầu ra cụ thể:
 ```bash
-stream-linker stop <outputUrl>
+stream-linker stop <đường/dẫn/ra>
 ```
-- ```<outputUrl>```: URL đầu ra RTMP cho việc truyền video trực tiếp. Bắt buộc phải được chỉ định.
+- ```<đường/dẫn/ra>```: Đường dẫn đầu ra RTMP cho truyền video trực tiếp. Phải được chỉ định.
+- ... sử dụng `stream-linker stop -h` để xem các tùy chọn có sẵn
 
 Ví dụ:
 ```bash
 stream-linker stop rtmp://example.com/live/streamkey
 ```
 
-Lưu ý:
-- Hãy chắc chắn rằng bạn đã cài đặt StreamLinker toàn cầu bằng cách sử dụng lệnh `npm install -g stream-linker` trước khi sử dụng CLI.
-- Đảm bảo rằng cả hai tệp video đầu vào và dự phòng tồn tại tại các đường dẫn đã chỉ định.
+Chú ý:
+- Đảm bảo bạn đã cài đặt StreamLinker toàn cầu bằng lệnh npm install -g stream-linker trước khi sử dụng CLI.
+- Đảm bảo cả tệp video nguồn và tệp video sao lưu tồn tại tại các đường dẫn được chỉ định.
 
 ## Hỗ trợ
-Liên hệ tác giả: hunglsxx@gmail.com
+Liên hệ với tác giả: hunglsxx@gmail.com
 
 ## Giấy phép
 Thư viện này được phát hành theo Giấy phép MIT.
