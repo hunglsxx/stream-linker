@@ -160,12 +160,12 @@ npm install -g stream-linker
 ```
 
 ### Start Command
-Launch your stream with StreamLinker:
-
 You can use `-h` or `--help` to see the available options.
 ```bash
 stream-linker -h
 ```
+
+Launch your stream with StreamLinker:
 ```bash
 stream-linker start -i <inputPath> -o <outputUrl> [-s <standbyPath>]
 ```
@@ -173,7 +173,6 @@ stream-linker start -i <inputPath> -o <outputUrl> [-s <standbyPath>]
 - ```-o, --output <outputUrl>```: RTMP output URL for live streaming. Must be specified.
 - ```-s, --standby <standbyPath>``` (optional): Path to the standby video for no signal.
 - ... use `stream-linker start -h` to see the available options.
-
 
 Example:
 ```bash

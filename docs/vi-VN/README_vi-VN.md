@@ -160,12 +160,12 @@ npm install -g stream-linker
 ```
 
 ### Lệnh Start
-Bắt đầu luồng của bạn với StreamLinker:
-
 Bạn có thể sử dụng `-h` hoặc `--help` để xem các tùy chọn có sẵn
 ```bash
 stream-linker -h
 ```
+
+Bắt đầu luồng của bạn với StreamLinker:
 ```bash
 stream-linker start -i <đường/dẫn/nguồn> -o <đường/dẫn/ra> [-s <đường/dẫn/sao/lưu>]
 ```
