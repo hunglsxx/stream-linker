@@ -1,6 +1,6 @@
 {
     "name": "stream-linker",
-    "version": "1.2.5",
+    "version": "1.2.7",
     "description": "StreamLinker: Effortlessly integrate continuous live streaming with dynamic file appending for uninterrupted broadcasts.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -51,7 +51,7 @@
         "bullmq": "^4.12.5",
         "commander": "^11.1.0",
         "fluent-ffmpeg": "^2.1.2",
-        "hls-maker": "^1.1.1",
+        "hls-maker": "^1.2.0",
         "md5": "^2.3.0"
     }
 }
