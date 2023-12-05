@@ -4,6 +4,7 @@ import fs from 'fs';
 import { HLSMaker } from "hls-maker";
 import path from 'path';
 import md5 from 'md5';
+import { EventEmitter } from 'events';
 
 export interface ConnectionConfig {
     host: string
@@ -22,6 +23,7 @@ export interface StreamLinkerConfig {
     rtmpOuputPath: string;
     standbyInputFilePath?: string;
     startInputFilePath: string;
+    isAppendDefault?: boolean;
 
     workerConnection?: ConnectionConfig,
     queueConnection?: ConnectionConfig,
@@ -61,7 +63,7 @@ const redisConnectionDefault: ConnectionConfig = {
     port: 6379
 }
 
-export class StreamLinker {
+export class StreamLinker extends EventEmitter {
     public rtmpOuputPath: string;
     public hlsManifestPath: string;
 
@@ -80,6 +82,8 @@ export class StreamLinker {
     public streamFrames: number;
     public streamLeft: number;
 
+    public isAppendDefault: boolean;
+
     private _ffmpegProcess: any;
     private _queueName: string;
 
@@ -87,6 +91,7 @@ export class StreamLinker {
     public ffmpegHLSOptions: ffmpegOptions;
 
     constructor(options: StreamLinkerConfig) {
+        super();
         let that = this;
         this.startInputFilePath = options.startInputFilePath;
         if (!fs.existsSync(this.startInputFilePath)) {
@@ -96,6 +101,7 @@ export class StreamLinker {
         this.hlsManifestPath = this._hlsManifestPath();
         this.broadcastStatus = broadcastStatus.PENDING;
         this.appendStatus = appendStatus.PENDING;
+        this.isAppendDefault = options.isAppendDefault || true;
         this.totalFrames = 0;
         this.streamFrames = 0;
         this.streamLeft = 0;
@@ -187,6 +193,7 @@ export class StreamLinker {
         });
 
         this.worker.on('completed', async (job: Job, returnvalue: any) => {
+            this.emit('completed', returnvalue);
             if (returnvalue && returnvalue.signal === processSignal.STOP) {
                 try {
                     console.log(returnvalue);
@@ -319,27 +326,24 @@ export class StreamLinker {
             .outputOptions(this.ffmpegStreamOptions.output)
             .output(this.rtmpOuputPath)
             .on('error', (err, stdout, stderr) => {
-                console.error('Error:', err.message);
-                console.error('ffmpeg stdout:', stdout);
-                console.error('ffmpeg stderr:', stderr);
+                this.emit('errorStream', err, stdout, stderr);
             })
             .on('start', (command) => {
-                console.log('ffmpeg command:', command);
+                this.emit('startStream', command);
             })
             .on('progress', async (progress) => {
-                console.log("Stream progress frames", progress.frames, "Total frames", this.totalFrames);
-
                 this.streamLeft = this.totalFrames - progress.frames;
-                await this._apendDefault();
+                this.emit('progressStream', this.totalFrames, progress.frames);
+                if (this.isAppendDefault) await this._appendDefault();
             })
             .on('end', () => {
-                console.log('Livestream ended');
+                this.emit('endStream', this.rtmpOuputPath);
             });
 
         this._ffmpegProcess.run();
     }
 
-    private async _apendDefault(): Promise<void> {
+    private async _appendDefault(): Promise<void> {
         if (this.streamLeft < 1000 && this.appendStatus == appendStatus.PENDING) {
             await this.queue.add(this._queueName, {
                 sourceFilePath: this.standbyInputFilePath || this.startInputFilePath,

@@ -72,6 +72,7 @@ interface StreamLinkerConfig {
     rtmpOuputPath: string; 
     standbyInputFilePath?: string;
     startInputFilePath: string;
+    isAppendDefault?: boolean;
     workerConnection?: ConnectionConfig,
     queueConnection?: ConnectionConfig,
     ffmpegHLSOptions?: ffmpegOptions,
@@ -83,6 +84,8 @@ interface StreamLinkerConfig {
 - `startInputFilePath` (string): Path to the source video file.
 
 - `standbyInputFilePath` (optional, string): Path to a backup video file. Activated if the source video ends. If not provided, the source video is looped.
+
+- `isAppendDefault` (optional, boolean): Default is `true`. If it is `false` stream will be stopped when video source ends (no loop)
 
 - `workerConnection` (optional, ConnectionConfig): Redis connection for the worker.
 
@@ -147,6 +150,27 @@ StreamLinker.insert('/path/to/another/source/file', 'rtmp://example.com/live/str
 // Stop the livestream
 // redisConfig param is optional
 StreamLinker.stop('rtmp://example.com/live/streamkey', redisConfig);
+
+// Events tracking
+stream.on('startStream', function (ffmpegCommand) {
+    console.log("onStartStream", ffmpegCommand)
+});
+
+stream.on('progressStream', function (totalFrames, progressFrames) {
+    console.log("onProgressStream", totalFrames, progressFrames);
+});
+
+stream.on('endStream', function (streamOutput) {
+    console.log("onEndStream", streamOutput);
+});
+
+stream.on('errorStream', function (err, stdout, stderr) {
+    console.log("err", err, "stdout", stdout, "stderr", stderr);
+});
+
+stream.on('completed', function (value) {
+    console.log("onCompleted", value);
+});
 ```
 
 ## Command Line Interface (CLI)

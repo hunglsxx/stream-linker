@@ -71,6 +71,7 @@ Giao diện: StreamLinkerConfig
 interface StreamLinkerConfig {
     rtmpOuputPath: string; 
     standbyInputFilePath?: string;
+    isAppendDefault?: boolean;
     startInputFilePath: string;
     workerConnection?: ConnectionConfig,
     queueConnection?: ConnectionConfig,
@@ -83,6 +84,8 @@ interface StreamLinkerConfig {
 - `startInputFilePath` (chuỗi): Đường dẫn đến tệp video nguồn.
 
 - `standbyInputFilePath` (tùy chọn, chuỗi): Đường dẫn đến một tệp video sao lưu. Kích hoạt khi video nguồn kết thúc. Nếu không cung cấp, video nguồn sẽ được lặp lại.
+
+- `isAppendDefault` (tùy chọn, boolean): Giá trị mặc định là `true`. Nếu là `false`, luồng sẽ dừng khi nguồn video kết thúc (không lặp lại).
 
 - `workerConnection` (tùy chọn, ConnectionConfig): Kết nối Redis cho worker.
 
@@ -147,6 +150,27 @@ StreamLinker.insert('/đường/dẫn/đến/tệp/nguồn/khác', 'rtmp://examp
 // Dừng truyền video trực tiếp
 // Tham số redisConfig là tùy chọn
 StreamLinker.stop('rtmp://example.com/live/streamkey', redisConfig);
+
+// Các sự kiện
+stream.on('startStream', function (ffmpegCommand) {
+    console.log("onStartStream", ffmpegCommand)
+});
+
+stream.on('progressStream', function (totalFrames, progressFrames) {
+    console.log("onProgressStream", totalFrames, progressFrames);
+});
+
+stream.on('endStream', function (streamOutput) {
+    console.log("onEndStream", streamOutput);
+});
+
+stream.on('errorStream', function (err, stdout, stderr) {
+    console.log("err", err, "stdout", stdout, "stderr", stderr);
+});
+
+stream.on('completed', function (value) {
+    console.log("onCompleted", value);
+});
 ```
 
 ## Giao diện dòng lệnh (CLI)
