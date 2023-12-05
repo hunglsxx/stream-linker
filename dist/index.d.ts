@@ -1,4 +1,6 @@
+/// <reference types="node" />
 import { Queue, Worker } from 'bullmq';
+import { EventEmitter } from 'events';
 export interface ConnectionConfig {
     host: string;
     port: number;
@@ -14,12 +16,13 @@ export interface StreamLinkerConfig {
     rtmpOuputPath: string;
     standbyInputFilePath?: string;
     startInputFilePath: string;
+    isAppendDefault?: boolean;
     workerConnection?: ConnectionConfig;
     queueConnection?: ConnectionConfig;
     ffmpegHLSOptions?: ffmpegOptions;
     ffmpegStreamOptions?: ffmpegOptions;
 }
-export declare class StreamLinker {
+export declare class StreamLinker extends EventEmitter {
     rtmpOuputPath: string;
     hlsManifestPath: string;
     startInputFilePath: string;
@@ -33,6 +36,7 @@ export declare class StreamLinker {
     totalFrames: number;
     streamFrames: number;
     streamLeft: number;
+    isAppendDefault: boolean;
     private _ffmpegProcess;
     private _queueName;
     ffmpegStreamOptions: ffmpegOptions;
@@ -49,7 +53,7 @@ export declare class StreamLinker {
     private _hlsManifestPath;
     private _isInitStream;
     private _broadcast;
-    private _apendDefault;
+    private _appendDefault;
     private _isExistManifestPath;
     private _queueInfo;
 }
