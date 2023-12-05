@@ -101,7 +101,7 @@ export class StreamLinker extends EventEmitter {
         this.hlsManifestPath = this._hlsManifestPath();
         this.broadcastStatus = broadcastStatus.PENDING;
         this.appendStatus = appendStatus.PENDING;
-        this.isAppendDefault = options.isAppendDefault || true;
+        this.isAppendDefault = ((options.isAppendDefault === false) ? options.isAppendDefault : true);
         this.totalFrames = 0;
         this.streamFrames = 0;
         this.streamLeft = 0;
@@ -333,8 +333,13 @@ export class StreamLinker extends EventEmitter {
             })
             .on('progress', async (progress) => {
                 this.streamLeft = this.totalFrames - progress.frames;
-                this.emit('progressStream', this.totalFrames, progress.frames);
-                if (this.isAppendDefault) await this._appendDefault();
+                this.emit('progressStream', this.totalFrames, progress);
+
+                if (this.isAppendDefault) {
+                    await this._appendDefault();
+                } else if (this.streamLeft < progress.currentFps) {
+                    await StreamLinker.stop(this.rtmpOuputPath, this.queueConnection);
+                }
             })
             .on('end', () => {
                 this.emit('endStream', this.rtmpOuputPath);
