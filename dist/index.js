@@ -71,7 +71,7 @@ class StreamLinker extends events_1.EventEmitter {
                     if (rmJob.id !== job.id)
                         await rmJob.remove();
                 }
-                return { 'signal': processSignal.STOP };
+                return { 'signal': processSignal.STOP, killProcess: job.data.killProcess };
             }
             else {
                 let makerData = {
@@ -138,7 +138,8 @@ class StreamLinker extends events_1.EventEmitter {
                     await that.worker.close();
                     await that.queue.close();
                     that._ffmpegProcess.kill();
-                    process.exit();
+                    if (returnvalue.killProcess)
+                        process.exit();
                 }
                 catch (error) {
                     console.log(error);
@@ -186,13 +187,16 @@ class StreamLinker extends events_1.EventEmitter {
         });
         this.worker.run();
     }
-    static async stop(rtmpOuputPath, redisConfig) {
+    static async stop(rtmpOuputPath, redisConfig, killProcess) {
         const queueName = StreamLinker.genQueueName(rtmpOuputPath);
         let queue = new bullmq_1.Queue(queueName, {
             connection: redisConfig || StreamLinker.getDefaultConnectionQueue()
         });
+        if (killProcess === undefined)
+            killProcess = true;
         await queue.add(`signal-${processSignal.STOP}`, {
-            signal: processSignal.STOP
+            signal: processSignal.STOP,
+            killProcess: killProcess
         }, { removeOnComplete: true, removeOnFail: 10 });
         return true;
     }

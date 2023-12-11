@@ -45,7 +45,7 @@ export declare class StreamLinker extends EventEmitter {
     get defaultConnectionQueue(): ConnectionConfig;
     get defaultFfmpegStreamOptions(): ffmpegOptions;
     start(): Promise<void>;
-    static stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<boolean>;
+    static stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig, killProcess?: boolean): Promise<boolean>;
     static append(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>;
     static insert(sourceFilePath: string, rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<void>;
     static getDefaultConnectionQueue(): ConnectionConfig;

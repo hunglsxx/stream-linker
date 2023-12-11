@@ -127,7 +127,7 @@ export class StreamLinker extends EventEmitter {
                 for (const rmJob of allJobs) {
                     if (rmJob.id !== job.id) await rmJob.remove();
                 }
-                return { 'signal': processSignal.STOP }
+                return { 'signal': processSignal.STOP, killProcess: job.data.killProcess }
             } else {
                 let makerData: any = {
                     hlsManifestPath: that.hlsManifestPath,
@@ -205,7 +205,7 @@ export class StreamLinker extends EventEmitter {
                     await that.worker.close();
                     await that.queue.close();
                     that._ffmpegProcess.kill();
-                    process.exit();
+                    if (returnvalue.killProcess) process.exit();
                 } catch (error) {
                     console.log(error);
                 }
@@ -258,13 +258,16 @@ export class StreamLinker extends EventEmitter {
         this.worker.run();
     }
 
-    public static async stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig): Promise<boolean> {
+    public static async stop(rtmpOuputPath: string, redisConfig?: ConnectionConfig, killProcess?: boolean): Promise<boolean> {
         const queueName = StreamLinker.genQueueName(rtmpOuputPath);
         let queue = new Queue(queueName, {
             connection: redisConfig || StreamLinker.getDefaultConnectionQueue()
         });
+        if (killProcess === undefined) killProcess = true;
+
         await queue.add(`signal-${processSignal.STOP}`, {
-            signal: processSignal.STOP
+            signal: processSignal.STOP,
+            killProcess: killProcess
         }, { removeOnComplete: true, removeOnFail: 10 });
         return true;
     }
