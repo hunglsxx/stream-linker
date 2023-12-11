@@ -181,8 +181,13 @@ export class StreamLinker extends EventEmitter {
                     default:
                         let makerAppend = new HLSMaker(makerData);
                         that.appendStatus = appendStatus.DISABLED;
-                        let concated = await makerAppend.conversion();
-                        that.totalFrames += concated.frames;
+                        let lastProgressFrames = 0;
+                        let concated = await makerAppend.conversion(function (progress) {
+                            if (progress.frames) {
+                                that.totalFrames += (progress.frames - lastProgressFrames);
+                                lastProgressFrames = progress.frames;
+                            }
+                        });
                         return concated;
                 }
             }
